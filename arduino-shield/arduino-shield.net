@@ -1,7 +1,7 @@
 (export (version D)
   (design
-    (source "C:/Users/Admin/Documents/designs/shift register tetris/arduino-shield/arduino-shield.sch")
-    (date "3/3/2017 11:19:58 AM")
+    (source C:/Users/Admin/Documents/designs/shift-register-tetris/arduino-shield/arduino-shield.sch)
+    (date "3/9/2017 12:34:34 PM")
     (tool "Eeschema 4.0.2-stable")
     (sheet (number 1) (name /) (tstamps /)
       (title_block
@@ -96,17 +96,17 @@
     (comp (ref U5)
       (value 1088BS)
       (footprint 1088BS:1088BS)
-      (libsource (lib 1088bs) (part 1088BS))
+      (libsource (lib arduino-shield-cache) (part 1088BS))
       (sheetpath (names /) (tstamps /))
       (tstamp 58B9C4CE))
     (comp (ref U6)
       (value 1088BS)
       (footprint 1088BS:1088BS)
-      (libsource (lib 1088bs) (part 1088BS))
+      (libsource (lib arduino-shield-cache) (part 1088BS))
       (sheetpath (names /) (tstamps /))
       (tstamp 58BA1A14)))
   (libparts
-    (libpart (lib 1088bs) (part 1088BS)
+    (libpart (lib arduino-shield-cache) (part 1088BS)
       (fields
         (field (name Reference) U)
         (field (name Value) 1088BS))
@@ -215,14 +215,12 @@
         (pin (num 7) (name P7) (type passive))
         (pin (num 8) (name P8) (type passive)))))
   (libraries
-    (library (logical 1088bs)
-      (uri "C:\\Users\\Admin\\Documents\\designs\\LED grid 8x8\\1088bs.lib"))
     (library (logical conn)
       (uri "C:\\Program Files\\KiCad\\share\\kicad\\library\\conn.lib"))
     (library (logical 74xx)
       (uri "C:\\Program Files\\KiCad\\share\\kicad\\library\\74xx.lib"))
     (library (logical arduino-shield-cache)
-      (uri "C:\\Users\\Admin\\Documents\\designs\\shift register tetris\\arduino-shield\\arduino-shield-cache.lib")))
+      (uri C:\Users\Admin\Documents\designs\shift-register-tetris\arduino-shield\arduino-shield-cache.lib)))
   (nets
     (net (code 1) (name "Net-(U1-Pad3)")
       (node (ref U5) (pin 12))

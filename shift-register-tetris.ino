@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------
-// ArduinoTetris - 
+// shift-register-tetris -
 // arduino + four shift registers + joystick + two 8x8 LED panels
 // dan@marginallyclever.com 2016-12-15
 //------------------------------------------------------------------------
@@ -11,8 +11,8 @@
 
 // pins on the shift - to - pins on arduino
 #define DATA                4
-#define LATCH               3
-#define CLK                 2
+#define LATCH               2
+#define CLK                 3
 
 // built in light on the uno
 #define LED                 13
@@ -59,15 +59,14 @@
 #define Y_AXIS_POSITIVE     -1  // 1 or -1 to flip control
 
 
-const char   anodesUnsorted[MAX_ANODES  ] = {        2,    4,       7,      10,   12,      15,16,17,      20,   22,23,24,25,      28,   30,31, };
-const char cathodesUnsorted[MAX_CATHODES] = {  0, 1,    3,    5, 6,    8, 9,   11,   13,14,         18,19,   21,            26,27,   29,       };
+const char   anodesUnsorted[MAX_ANODES  ] = { 0,    3,  5,    8,9,      12,   14,15,16,      19,   21,      24,25,      28,   30,31, };
+const char cathodesUnsorted[MAX_CATHODES] = {   1,2,  4,  6,7,    10,11,   13,         17,18,   20,   22,23,      26,27,   29,       };
 // fast lookup based on anodesUnsorted
-const char   anodesFlag    [MAX_PINS    ] = {  0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, };
+const char   anodesFlag    [MAX_PINS    ] = { 1,0,0,1,0,1,0,0,1,1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, };
 // sorted along x
-const char   anodes        [MAX_ANODES  ] = {  7, 2,31, 4,24,30,25,28, 15,10,23,12,16,22,17,20, };
+const char anodes  [MAX_ANODES  ] = {  0,5,15,3,8,14,9,12,16,21,31,19,24,30,25,28, };
 // sorted along y
-const char cathodes        [MAX_CATHODES] = {  0, 1, 5,29, 6,27,26, 3,  8, 9,13,21,14,19,18,11, };
-
+const char cathodes[MAX_CATHODES] = {  4,10,11,1,13,2,6,7,20,26,27,17,29,18,22,23, };
 
 
 // 1 color drawings of each piece in each rotation.
@@ -291,6 +290,8 @@ long dropDelay=DROP_DELAY;
 // this is how arduino remembers where pieces are on the grid.
 int grid[WIDTH*HEIGHT];
 
+char registers[MAX_PINS];
+
 
 //------------------------------------------------------------------------
 // METHODS
@@ -324,6 +325,20 @@ void loop() {
 }
 
 
+// shift in all the data in a single pass.
+// register[MAX_PINS-1] must be shifted in first, register[0] shifted in last.
+void updateRegisters() {
+  int i;
+  for(i=0;i<MAX_PINS;++i) {
+    digitalWrite(DATA,registers[MAX_PINS-1-i]);
+    digitalWrite(CLK,HIGH);
+    digitalWrite(CLK,LOW);
+  }
+  digitalWrite(LATCH,HIGH);
+  digitalWrite(LATCH,LOW);
+}
+
+
 void drawEveryPieceAndRotation() {
   chooseNewPiece();
   pieceY=2;
@@ -348,32 +363,24 @@ void drawGridRow(int y,int test) {
   int b = (y>=MAX_ANODES/2) ? MAX_ANODES/2:0;
 
   // build a list of the anodes and cathodes that should be high
-  int pinStates[MAX_PINS];
   int i;
   
   for(i=0;i<MAX_PINS;++i) {
     // low by default
-    pinStates[i]=LOW;
+    registers[i]=LOW;
     // high if not a cathode for the column we want
     if(isCathode(i) && i!=cathodeY) {
-      pinStates[i]=HIGH;
+      registers[i]=HIGH;
     }
   }
   for(i=0;i<WIDTH;++i) {
     // high if an anode that we want
     if( grid[y*WIDTH+i] != test ) {
-      pinStates[anodes[i+b]] = HIGH;
+      registers[anodes[i+b]] = HIGH;
     }
   }
 
-  // now shift in all the data in a single pass.
-  for(i=0;i<MAX_PINS;++i) {
-    digitalWrite(DATA,pinStates[i]);
-    digitalWrite(CLK,HIGH);
-    digitalWrite(CLK,LOW);
-  }
-  digitalWrite(LATCH,HIGH);
-  digitalWrite(LATCH,LOW);
+  updateRegisters();
 }
 
 
@@ -755,16 +762,14 @@ void lightXY(int x,int y) {
 
   int i;
   for(i=0;i<MAX_PINS;++i) {
+    registers[i]=LOW;
     if(i==anodeX) {
       // the anode we want
-      digitalWrite(DATA,HIGH);
+      registers[i]=HIGH;
     } else if(isCathode(i) && i!=cathodeY) {
       // set low only the cathode we want
-      digitalWrite(DATA,HIGH);
+      registers[i]=HIGH;
     }
-    digitalWrite(CLK,HIGH);
-    digitalWrite(CLK,LOW);
-    digitalWrite(DATA,LOW);
   }
 }
 
@@ -774,15 +779,9 @@ void setOneHigh(int n) {
   // loop through the rest
   int i;
   for(i=0;i<MAX_PINS;++i) {
-    if(n==i) {
-      digitalWrite(DATA,HIGH);
-    }
-    digitalWrite(CLK,HIGH);
-    digitalWrite(CLK,LOW);
-    digitalWrite(DATA,LOW);
+      registers[i]= (n==i) ? HIGH : LOW;
   }
-  digitalWrite(LATCH,HIGH);
-  digitalWrite(LATCH,LOW);
+  updateRegisters();
 }
 
 
@@ -815,14 +814,13 @@ void scrollingText() {
   do {
     for(y=0;y<HEIGHT;++y) {
       for(x=0;x<WIDTH;++x) {
-          nx = MESSAGE_W * (WIDTH-1-x);
+          nx = MESSAGE_W * x;
           ny = ( scroll_step + y ) % MESSAGE_W;
           // if it's a 1, turn on the light for a fraction of a second.
           // persistence of vision will create the illusion thath it's solid.
           if( message[ ny + nx ] == 1 ) {
             lightXY(x,y);
-            digitalWrite(LATCH,HIGH);
-            digitalWrite(LATCH,LOW);
+            updateRegisters();
           }
       }
     }
@@ -842,8 +840,7 @@ void lightOnePixelAtATime() {
   for(y=0;y<HEIGHT;++y) {
     for(x=0;x<WIDTH;++x) {
       lightXY(x,y);
-      digitalWrite(LATCH,HIGH);
-      digitalWrite(LATCH,LOW);
+      updateRegisters();
       delay(WAIT2);
     }
   }
@@ -867,18 +864,17 @@ void lightEachRowSorted() {
 void setOneRow(int a) {
   int i;
   for(i=0;i<MAX_PINS;++i) {
+    registers[i] = LOW;
     if(isAnode(i)) {
       // all anodes high
-      digitalWrite(DATA,HIGH);
+      registers[i] = HIGH;
     } else if(i!=a) {
       // all cathodes high EXCEPT the row we want to light.
       // (setting cathode high blocks voltage passing through LED)
-      digitalWrite(DATA,HIGH);
+      registers[i] = HIGH;
     }
-    digitalWrite(CLK,HIGH);
-    digitalWrite(CLK,LOW);
-    digitalWrite(DATA,LOW);
   }
+  updateRegisters();
 }
 
 
@@ -924,14 +920,11 @@ void setTwoHigh(int a,int b) {
   int i;
   for(i=0;i<MAX_PINS;++i) {
     if(a==i || b==i) {
-      digitalWrite(DATA,HIGH);
-    }
-    digitalWrite(CLK,HIGH);
-    digitalWrite(CLK,LOW);
-    digitalWrite(DATA,LOW);
+      registers[i]=HIGH;
+    } else
+    registers[i]=LOW;
   }
-  digitalWrite(LATCH,HIGH);
-  digitalWrite(LATCH,LOW);
+  updateRegisters();
 }
 
 
@@ -963,7 +956,7 @@ void findAnodes() {
   for(i=0;i<MAX_PINS;++i) {
     Serial.println(i,DEC);
     setOneHigh(i);
-    delay(4000);
+    delay(3000);
   }
 }
 
