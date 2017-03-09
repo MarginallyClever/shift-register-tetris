@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name tetris-led)(type KiCad)(uri "$(KIPRJMOD)\\tetris-led.pretty")(options "")(descr ""))
+)
